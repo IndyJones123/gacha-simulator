@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gacha Simulator</title>
+<style>
+  :root {
+    --bg: #0f1020;
+    --panel: #1a1c33;
+    --panel-2: #222548;
+    --border: #3a3f70;
+    --text: #e8e9f5;
+    --muted: #b4b8d8;
+    --accent: #f5b942;
+    --accent-2: #ff6b9d;
+    --focus: #7cc4ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(circle at top, #23264d 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  header { text-align: center; padding: 28px 16px 8px; }
+  header h1 { margin: 0; font-size: 2rem; color: var(--accent); letter-spacing: 1px; }
+  header p { margin: 6px 0 0; color: var(--muted); }
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 20px auto;
+    padding: 0 16px;
+  }
+  @media (min-width: 1000px) { main { grid-template-columns: 1fr 1fr 300px; } }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  h2 { margin: 0 0 14px; font-size: 1.2rem; color: var(--accent); }
+  label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  input,
+  select,
+  textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  input:focus, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .hint { color: var(--muted); font-size: 0.9rem; margin: -6px 0 12px; }
+  button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #1b1020;
+    border: none;
+    width: 100%;
+    padding: 16px;
+    font-size: 1.3rem;
+  }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.small { padding: 4px 10px; font-size: 0.85rem; }
+  button.stop { background: var(--panel-2); color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .auto-row { display: flex; gap: 10px; }
+  .auto-row button { flex: 1; }
+  .switch { position: relative; display: inline-flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer; user-select: none; margin-bottom: 12px; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; }
+  .switch .track {
+    position: relative;
+    width: 46px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+  }
+  .switch .thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--muted);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.35s ease;
+  }
+  .switch:hover .track { border-color: var(--accent); }
+  .switch input:checked + .track { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; box-shadow: 0 0 12px rgba(245, 185, 66, 0.35); }
+  .switch input:checked + .track .thumb { transform: translateX(20px); background: #fff; }
+  .switch input:focus-visible + .track { outline: 3px solid var(--focus); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .switch .track, .switch .thumb { transition: none; } }
+  textarea { resize: vertical; font-family: inherit; }
+  .bulk-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .bulk-head label { margin: 0; }
+  .fx-col { display: none; }
+  body.refine .fx-col { display: table-cell; }
+  td select { width: auto; padding: 4px 6px; }
+  button.danger:hover { border-color: var(--accent-2); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); text-align: center; padding: 18px 0; }
+  .result {
+    text-align: center;
+    margin: 18px 0;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--panel-2);
+    border-radius: 12px;
+    border: 1px dashed var(--border);
+    padding: 14px;
+  }
+  .result .name { font-size: 1.7rem; font-weight: 800; color: var(--accent); word-break: break-word; }
+  .result .sub { color: var(--muted); font-size: 0.95rem; }
+  .row-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .history-list { max-height: 420px; overflow-y: auto; }
+  .history-item { display: flex; justify-content: space-between; gap: 8px; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  .history-item .roll { color: var(--muted); min-width: 48px; }
+  .history-item .name { flex: 1; font-weight: 600; word-break: break-word; }
+  .stats { color: var(--muted); font-size: 0.9rem; margin-top: 10px; }
+  .notice { color: var(--accent-2); min-height: 1.3em; margin: 0 0 10px; font-size: 0.9rem; }
+  .bar { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .item-remove { color: var(--accent-2); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 16px; }
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  .navbar .brand { font-weight: 800; color: var(--accent); letter-spacing: 1px; }
+  .navbar a { color: var(--focus); font-weight: 600; text-decoration: none; }
+  .navbar a:hover { text-decoration: underline; }
+  .nav-right { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 18px; }
+  .navbar .switch { margin: 0; gap: 8px; font-size: 0.85rem; }
+  .donate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .donate img { width: 100%; height: auto; border-radius: 12px; background: #fff; }
+  .donate p { margin: 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<nav class="navbar" aria-label="Site">
+  <span class="brand">GACHA SIMULATOR</span>
+  <div class="nav-right">
+    <span><span data-i18n="credit">Copyright © created by</span> <a href="https://reogsolodev.com" target="_blank" rel="noopener noreferrer">reogsolodev.com - AlfianDev</a></span>
+    <label class="switch">
+      <span>EN</span>
+      <input id="lang-toggle" type="checkbox" role="switch" data-i18n-aria="langToggle" />
+      <span class="track"><span class="thumb"></span></span>
+      <span>ID</span>
+    </label>
+  </div>
+</nav>
+
+<header>
+  <h1>GACHA SIMULATOR</h1>
+  <p data-i18n="subtitle">Add items and their rates, then roll. History lives in this tab's memory only and is released when you close it.</p>
+</header>
+
+<main>
+  <section aria-labelledby="pool-title">
+    <h2 id="pool-title" data-i18n="poolTitle">1. Item Pool</h2>
+    <form id="item-form" autocomplete="off">
+      <label class="switch">
+        <input id="bulk-toggle" type="checkbox" role="switch" />
+        <span class="track"><span class="thumb"></span></span>
+        <span data-i18n="bulkInsert">Bulk insert</span>
+      </label>
+
+      <div id="single-fields">
+        <label for="item-name" data-i18n="itemName">Item name</label>
+        <input id="item-name" type="text" maxlength="60" data-i18n-ph="itemNamePh" placeholder="e.g. Golden Sword" />
+
+        <label for="item-rate" data-i18n="rateLabel">Rate (chance)</label>
+        <input id="item-rate" type="number" min="0.0001" step="any" placeholder="e.g. 5" />
+      </div>
+
+      <div id="bulk-fields" hidden>
+        <div class="bulk-head">
+          <label for="bulk-input" data-i18n="itemsRates">Items and rates</label>
+          <button id="refine-tpl" class="small" type="button" data-i18n="templateRefine">Template Refine</button>
+        </div>
+        <textarea id="bulk-input" rows="4" data-i18n-ph="bulkPh" placeholder="Golden Sword,5,Silver Sword,20,Iron Sword,75"></textarea>
+      </div>
+
+      <p class="hint" data-i18n="poolHint">Any positive number. Rates are relative: each item's % = its rate / total of all rates. Bulk format: itemname,rate,itemname,rate (comma or newline separated).</p>
+
+      <button type="submit" class="small" data-i18n="addItem">Add item</button>
+    </form>
+
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+
+    <div class="row-actions">
+      <span id="pool-count" class="stats"></span>
+      <button id="clear-pool" class="small danger" type="button" data-i18n="clearPool">Clear pool</button>
+    </div>
+    <div class="table-wrap">
+      <table aria-label="Item pool">
+        <thead>
+          <tr>
+            <th scope="col" data-i18n="colItem">Item</th>
+            <th scope="col" class="num" data-i18n="colRate">Rate</th>
+            <th scope="col" class="num" data-i18n="colChance">Chance</th>
+            <th scope="col" class="fx-col" data-i18n="colEffect">Efek</th>
+            <th scope="col"><span class="sr-only" data-i18n="colActions">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="pool-body"></tbody>
+      </table>
+      <p id="pool-empty" class="empty" data-i18n="poolEmpty">No items yet. Add at least one item to roll.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="roll-title">
+    <h2 id="roll-title" data-i18n="rollTitle">2. Roll</h2>
+    <div class="result" aria-live="polite">
+      <div id="result-name" class="name">Ready?</div>
+      <div id="result-sub" class="sub">Press the button to roll.</div>
+    </div>
+    <label class="switch">
+      <input id="refine-toggle" type="checkbox" role="switch" />
+      <span class="track"><span class="thumb"></span></span>
+      <span data-i18n="refineMode">Refine mode</span>
+    </label>
+    <button id="roll-btn" class="primary" type="button" disabled>ROLL</button>
+    <div id="target-fields">
+      <label for="target-item" data-i18n="targetLabel">Target item (auto roll)</label>
+      <select id="target-item"></select>
+    </div>
+    <div id="refine-fields" hidden>
+      <label for="refine-target" data-i18n="refineTarget">Target naik (posisi)</label>
+      <input id="refine-target" type="number" min="1" step="1" value="3" />
+      <p class="hint" data-i18n="refineHint">Efek tiap item diatur di tabel Item Pool: +1 naik, -1 turun, 0 tetap. Posisi tidak turun di bawah 0.</p>
+    </div>
+    <label for="max-rolls" data-i18n="maxRolls">Max rolls (safety limit)</label>
+    <input id="max-rolls" type="number" min="1" step="1" value="1000" />
+    <div class="auto-row">
+      <button id="auto-btn" class="primary" type="button" disabled>AUTO ROLL</button>
+      <button id="stop-btn" class="primary stop" type="button" disabled data-i18n="stop">STOP</button>
+    </div>
+    <p class="stats" id="refine-stats" hidden></p>
+    <p class="stats" id="roll-stats"></p>
+  </section>
+
+  <section class="donate" aria-labelledby="donate-title">
+    <h2 id="donate-title" data-i18n="donateTitle">Donate</h2>
+    <p data-i18n="donateText">Donate me for coffee if you like this tool</p>
+    <img src="alfiandevqris.jpeg" data-i18n-alt="qrisAlt" alt="QRIS donate AlfianDev" />
+  </section>
+
+  <section aria-labelledby="history-title" style="grid-column: 1 / -1;">
+    <div class="row-actions">
+      <h2 id="history-title" style="margin:0" data-i18n="historyTitle">3. History (this session only)</h2>
+      <button id="clear-history" class="small danger" type="button" data-i18n="clearHistory">Clear history</button>
+    </div>
+    <div class="history-list" id="history-list" aria-live="off"></div>
+    <p id="history-empty" class="empty" data-i18n="historyEmpty">No rolls yet.</p>
+  </section>
+</main>
+
+<footer data-i18n="footer">
+  Nothing is saved to a database or local storage. Refreshing or closing the tab resets everything.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // All state lives in memory only (no localStorage / IndexedDB / server).
+  // When the tab closes or reloads, the JS heap is released with it.
+  const T = {
+    en: {
+      credit: "Copyright © created by",
+      langToggle: "Switch language: English / Indonesia",
+      subtitle: "Add items and their rates, then roll. History lives in this tab's memory only and is released when you close it.",
+      poolTitle: "1. Item Pool",
+      bulkInsert: "Bulk insert",
+      itemName: "Item name",
+      itemNamePh: "e.g. Golden Sword",
+      rateLabel: "Rate (chance)",
+      itemsRates: "Items and rates",
+      templateRefine: "Template Refine",
+      bulkPh: "Golden Sword,5,Silver Sword,20,Iron Sword,75",
+      refineTplText: "success,10,down,20,fail,70",
+      poolHint: "Any positive number. Rates are relative: each item's % = its rate / total of all rates. Bulk format: itemname,rate,itemname,rate (comma or newline separated).",
+      addItem: "Add item",
+      clearPool: "Clear pool",
+      colItem: "Item", colRate: "Rate", colChance: "Chance", colEffect: "Effect", colActions: "Actions",
+      poolEmpty: "No items yet. Add at least one item to roll.",
+      remove: "Remove",
+      effectOf: "Effect of {0}",
+      removeOf: "Remove {0}",
+      rollTitle: "2. Roll",
+      ready: "Ready?",
+      pressRoll: "Press the button to roll.",
+      refineMode: "Refine mode",
+      roll: "ROLL",
+      autoRoll: "AUTO ROLL",
+      stop: "STOP",
+      targetLabel: "Target item (auto roll)",
+      refineTarget: "Target up (position)",
+      refineHint: "Each item's effect is set in the Item Pool table: +1 up, -1 down, 0 stays. Position never drops below 0.",
+      maxRolls: "Max rolls (safety limit)",
+      donateTitle: "Donate",
+      donateText: "Donate me for coffee if you like this tool",
+      qrisAlt: "QRIS donate AlfianDev",
+      historyTitle: "3. History (this session only)",
+      clearHistory: "Clear history",
+      historyEmpty: "No rolls yet.",
+      footer: "Nothing is saved to a database or local storage. Refreshing or closing the tab resets everything.",
+      errName: "Item name cannot be empty.",
+      errRate: "Rate must be a number greater than 0.",
+      errBulkEmpty: "Bulk input is empty.",
+      errBulkOdd: "Format: itemname,rate,itemname,rate (odd number of values).",
+      errPair: "Pair #{0} ({1}): {2}",
+      lockedMsg: "Fill at least {0} items first",
+      targetRemoved: "Target removed, auto roll stopped.",
+      pickTarget: "Pick a target item first.",
+      gotItem: "Got {0} after {1} roll(s).",
+      notObtained: "Stopped: {0} roll(s), target not obtained.",
+      stoppedManual: "Stopped manually.",
+      refineDone: "Refine done: up {0} in {1} roll(s).",
+      refineStopped: "Stopped: {0} roll(s), position {1}/{2}.",
+      refineStatsDone: "Refine done ({0} roll(s)). Next roll starts a new run.",
+      refineStatsRun: "Position {0}/{1} · rolls this run: {2}",
+      poolCount: "{0} item(s), total rate {1}",
+      chance: "Chance {0}",
+      rollNo: "roll #{0}",
+      position: "position {0}/{1}",
+      rollsSession: "Total rolls this session: {0}"
+    },
+    id: {
+      credit: "Hak cipta © dibuat oleh",
+      langToggle: "Ganti bahasa: English / Indonesia",
+      subtitle: "Tambahkan item dan rate-nya, lalu roll. Riwayat hanya ada di memori tab ini dan hilang saat tab ditutup.",
+      poolTitle: "1. Daftar Item",
+      bulkInsert: "Bulk insert",
+      itemName: "Nama item",
+      itemNamePh: "contoh: Pedang Emas",
+      rateLabel: "Rate (peluang)",
+      itemsRates: "Item dan rate",
+      templateRefine: "Template Refine",
+      bulkPh: "Pedang Emas,5,Pedang Perak,20,Pedang Besi,75",
+      refineTplText: "success,10,turun,20,gagal,70",
+      poolHint: "Angka positif apa pun. Rate bersifat relatif: persen tiap item = rate-nya / total semua rate. Format bulk: namaitem,rate,namaitem,rate (dipisah koma atau baris baru).",
+      addItem: "Tambah item",
+      clearPool: "Kosongkan daftar",
+      colItem: "Item", colRate: "Rate", colChance: "Peluang", colEffect: "Efek", colActions: "Aksi",
+      poolEmpty: "Belum ada item. Tambahkan minimal satu item untuk roll.",
+      remove: "Hapus",
+      effectOf: "Efek {0}",
+      removeOf: "Hapus {0}",
+      rollTitle: "2. Roll",
+      ready: "Siap?",
+      pressRoll: "Tekan tombol untuk roll.",
+      refineMode: "Mode Refine",
+      roll: "ROLL",
+      autoRoll: "AUTO ROLL",
+      stop: "STOP",
+      targetLabel: "Target item (auto roll)",
+      refineTarget: "Target naik (posisi)",
+      refineHint: "Efek tiap item diatur di tabel Daftar Item: +1 naik, -1 turun, 0 tetap. Posisi tidak pernah di bawah 0.",
+      maxRolls: "Batas roll (pengaman)",
+      donateTitle: "Donasi",
+      donateText: "Traktir kopi kalau kamu suka tool ini",
+      qrisAlt: "QRIS donasi AlfianDev",
+      historyTitle: "3. Riwayat (sesi ini saja)",
+      clearHistory: "Hapus riwayat",
+      historyEmpty: "Belum ada roll.",
+      footer: "Tidak ada yang disimpan ke database maupun local storage. Refresh atau menutup tab akan mereset semuanya.",
+      errName: "Nama item tidak boleh kosong.",
+      errRate: "Rate harus angka lebih dari 0.",
+      errBulkEmpty: "Input bulk masih kosong.",
+      errBulkOdd: "Format: namaitem,rate,namaitem,rate (jumlah nilai ganjil).",
+      errPair: "Pasangan #{0} ({1}): {2}",
+      lockedMsg: "Isi minimal {0} item dulu",
+      targetRemoved: "Target dihapus, auto roll dihentikan.",
+      pickTarget: "Pilih target item dulu.",
+      gotItem: "Dapat {0} setelah {1} roll.",
+      notObtained: "Berhenti: {0} roll, target belum didapat.",
+      stoppedManual: "Dihentikan manual.",
+      refineDone: "Refine selesai: naik {0} dalam {1} roll.",
+      refineStopped: "Berhenti: {0} roll, posisi {1}/{2}.",
+      refineStatsDone: "Refine selesai ({0} roll). Roll berikutnya memulai run baru.",
+      refineStatsRun: "Posisi {0}/{1} · roll run ini: {2}",
+      poolCount: "{0} item, total rate {1}",
+      chance: "Peluang {0}",
+      rollNo: "roll #{0}",
+      position: "posisi {0}/{1}",
+      rollsSession: "Total roll di sesi ini: {0}"
+    }
+  };
+
+  let lang = "en";
+  let pool = [];
+  /** @type {{roll: number, name: string, rate: number, chance: number}[]} */
+  let history = [];
+  let nextId = 1;
+  let rollCount = 0;
+  let lastRoll = null;
+  let autoTimer = null;
+  let autoStart = 0;
+  let autoTarget = null;
+  const AUTO_DELAY_MS = 150;
+  const MIN_POOL = 2;
+  let refineOn = false;
+  let refine = { pos: 0, rolls: 0 };
+
+  const $ = (id) => document.getElementById(id);
+  const itemForm = $("item-form");
+  const itemName = $("item-name");
+  const itemRate = $("item-rate");
+  const bulkToggle = $("bulk-toggle");
+  const singleFields = $("single-fields");
+  const bulkFields = $("bulk-fields");
+  const bulkInput = $("bulk-input");
+  const refineTpl = $("refine-tpl");
+  const refineToggle = $("refine-toggle");
+  const targetFields = $("target-fields");
+  const refineFields = $("refine-fields");
+  const refineInput = $("refine-target");
+  const refineStats = $("refine-stats");
+  const langToggle = $("lang-toggle");
+  const notice = $("notice");
+  const poolBody = $("pool-body");
+  const poolEmpty = $("pool-empty");
+  const poolCount = $("pool-count");
+  const rollBtn = $("roll-btn");
+  const resultName = $("result-name");
+  const resultSub = $("result-sub");
+  const rollStats = $("roll-stats");
+  const historyList = $("history-list");
+  const historyEmpty = $("history-empty");
+  const targetSel = $("target-item");
+  const maxInput = $("max-rolls");
+  const autoBtn = $("auto-btn");
+  const stopBtn = $("stop-btn");
+
+  function t(key, ...args) {
+    return T[lang][key].replace(/\{(\d)\}/g, (_, i) => args[i]);
+  }
+
+  function applyI18n() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+    document.querySelectorAll("[data-i18n-alt]").forEach((el) => { el.alt = t(el.dataset.i18nAlt); });
+    document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+  }
+
+  function totalRate() {
+    return pool.reduce((sum, it) => sum + it.rate, 0);
+  }
+
+  function chanceOf(item) {
+    const total = totalRate();
+    return total > 0 ? (item.rate / total) * 100 : 0;
+  }
+
+  function formatPct(p) {
+    if (p === 0) return "0%";
+    if (p < 0.01) return "<0.01%";
+    return p.toFixed(2) + "%";
+  }
+
+  function formatRate(r) {
+    return Number.isInteger(r) ? String(r) : String(Number(r.toFixed(4)));
+  }
+
+  function setNotice(msg) {
+    notice.textContent = msg || "";
+  }
+
+  function renderResult() {
+    if (!lastRoll) {
+      resultName.textContent = t("ready");
+      resultSub.textContent = t("pressRoll");
+      return;
+    }
+    resultName.textContent = lastRoll.name;
+    let sub = t("chance", formatPct(lastRoll.chance)) + " · " + t("rollNo", lastRoll.roll);
+    if (lastRoll.pos !== null) sub += " · " + t("position", lastRoll.pos, refineGoal());
+    resultSub.textContent = sub;
+  }
+
+  function renderPool() {
+    if (autoTimer && !refineOn && !pool.some((it) => it.id === autoTarget)) stopAuto(t("targetRemoved"));
+    const prev = targetSel.value;
+    targetSel.textContent = "";
+    pool.forEach((it) => targetSel.add(new Option(it.name + " (" + formatRate(it.rate) + ")", it.id)));
+    targetSel.value = prev;
+    if (targetSel.selectedIndex < 0) targetSel.selectedIndex = 0;
+    poolBody.textContent = "";
+    const total = totalRate();
+    pool.forEach((it) => {
+      const pct = chanceOf(it);
+      const tr = document.createElement("tr");
+
+      const tdName = document.createElement("td");
+      tdName.textContent = it.name; // textContent: no HTML injection
+
+      const tdRate = document.createElement("td");
+      tdRate.className = "num";
+      tdRate.textContent = formatRate(it.rate);
+
+      const tdChance = document.createElement("td");
+      tdChance.className = "num";
+      tdChance.textContent = formatPct(pct);
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.setAttribute("aria-hidden", "true");
+      const fill = document.createElement("span");
+      fill.style.width = Math.min(100, pct).toFixed(2) + "%";
+      bar.appendChild(fill);
+      tdChance.appendChild(bar);
+
+      const tdFx = document.createElement("td");
+      tdFx.className = "fx-col";
+      const fx = document.createElement("select");
+      fx.setAttribute("aria-label", t("effectOf", it.name));
+      [["+1", 1], ["-1", -1], ["0", 0]].forEach(([label, v]) => fx.add(new Option(label, v, false, v === it.delta)));
+      fx.addEventListener("change", () => { it.delta = Number(fx.value); });
+      tdFx.appendChild(fx);
+
+      const tdAct = document.createElement("td");
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "small item-remove";
+      rm.textContent = t("remove");
+      rm.setAttribute("aria-label", t("removeOf", it.name));
+      rm.addEventListener("click", () => removeItem(it.id));
+      tdAct.appendChild(rm);
+
+      tr.append(tdName, tdRate, tdChance, tdFx, tdAct);
+      poolBody.appendChild(tr);
+    });
+
+    poolEmpty.style.display = pool.length ? "none" : "block";
+    poolCount.textContent = t("poolCount", pool.length, formatRate(Number(total.toFixed(4))));
+    setAutoUi(autoTimer !== null);
+  }
+
+  function renderHistory() {
+    historyList.textContent = "";
+    // Newest first
+    for (let i = history.length - 1; i >= 0; i--) {
+      const h = history[i];
+      const row = document.createElement("div");
+      row.className = "history-item";
+
+      const roll = document.createElement("span");
+      roll.className = "roll";
+      roll.textContent = "#" + h.roll;
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = h.name;
+
+      const chance = document.createElement("span");
+      chance.className = "num";
+      chance.textContent = formatPct(h.chance);
+
+      row.append(roll, name, chance);
+      historyList.appendChild(row);
+    }
+    historyEmpty.style.display = history.length ? "none" : "block";
+    rollStats.textContent = rollCount ? t("rollsSession", rollCount) : "";
+  }
+
+  function removeItem(id) {
+    pool = pool.filter((it) => it.id !== id);
+    setNotice("");
+    renderPool();
+  }
+
+  function validItem(name, rate) {
+    if (!name) return t("errName");
+    if (!Number.isFinite(rate) || rate <= 0) return t("errRate");
+    return "";
+  }
+
+  function defaultDelta(name) {
+    if (/success|naik|\bup\b/i.test(name)) return 1;
+    if (/turun|\bdown\b/i.test(name)) return -1;
+    return 0;
+  }
+
+  // Bulk: "name,rate,name,rate" (comma or newline). All-or-nothing: one bad pair adds nothing.
+  function parseBulk(text) {
+    const tokens = text.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
+    if (tokens.length === 0) return { error: t("errBulkEmpty") };
+    if (tokens.length % 2) return { error: t("errBulkOdd") };
+    const items = [];
+    for (let i = 0; i < tokens.length; i += 2) {
+      const name = tokens[i];
+      const rate = Number(tokens[i + 1]);
+      const error = validItem(name, rate);
+      if (error) return { error: t("errPair", i / 2 + 1, name, error) };
+      items.push({ name, rate, delta: defaultDelta(name) });
+    }
+    return { items };
+  }
+
+  bulkToggle.addEventListener("change", () => {
+    singleFields.hidden = bulkToggle.checked;
+    bulkFields.hidden = !bulkToggle.checked;
+    setNotice("");
+  });
+
+  refineTpl.addEventListener("click", () => {
+    bulkInput.value = t("refineTplText");
+    bulkInput.focus();
+  });
+
+  function renderRefine() {
+    refineStats.hidden = !refineOn;
+    if (!refineOn) return;
+    refineStats.textContent = refineDone()
+      ? t("refineStatsDone", refine.rolls)
+      : t("refineStatsRun", refine.pos, refineGoal(), refine.rolls);
+  }
+
+  function refineGoal() {
+    return Math.max(1, Math.floor(Number(refineInput.value)) || 1);
+  }
+
+  function refineDone() {
+    return refineOn && refine.pos >= refineGoal();
+  }
+
+  itemForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (bulkToggle.checked) {
+      const { items, error } = parseBulk(bulkInput.value);
+      if (error) return setNotice(error);
+      items.forEach((it) => pool.push({ id: nextId++, ...it }));
+      bulkInput.value = "";
+    } else {
+      const name = itemName.value.trim();
+      const rate = Number(itemRate.value);
+      const error = validItem(name, rate);
+      if (error) return setNotice(error);
+      pool.push({ id: nextId++, name, rate, delta: defaultDelta(name) });
+      itemName.value = "";
+      itemRate.value = "";
+      itemName.focus();
+    }
+    setNotice("");
+    renderPool();
+  });
+
+  $("clear-pool").addEventListener("click", () => {
+    pool = [];
+    setNotice("");
+    renderPool();
+  });
+
+  $("clear-history").addEventListener("click", () => {
+    history = [];
+    rollCount = 0;
+    renderHistory();
+  });
+
+  function pickItem() {
+    // Weighted random: pick r in [0, total), walk the list until cumulative > r.
+    const total = totalRate();
+    let r = Math.random() * total;
+    for (const it of pool) {
+      r -= it.rate;
+      if (r < 0) return it;
+    }
+    return pool[pool.length - 1]; // floating-point safety net
+  }
+
+  function doRoll() {
+    if (refineDone()) refine = { pos: 0, rolls: 0 }; // finished run -> start a new one
+    const item = pickItem();
+    rollCount++;
+    const chance = chanceOf(item);
+    if (refineOn) {
+      refine.rolls++;
+      refine.pos = Math.max(0, refine.pos + item.delta);
+    }
+    lastRoll = { name: item.name, chance, roll: rollCount, pos: refineOn ? refine.pos : null };
+    renderResult();
+
+    history.push({ roll: rollCount, name: item.name, rate: item.rate, chance });
+    renderHistory();
+    renderRefine();
+    return item;
+  }
+
+  function maxRolls() {
+    return Math.max(1, Math.floor(Number(maxInput.value)) || 1);
+  }
+
+  function setAutoUi(running) {
+    const locked = pool.length < MIN_POOL;
+    const lock = locked ? "🔒 " : "";
+    rollBtn.disabled = running || locked;
+    autoBtn.disabled = running || locked;
+    rollBtn.textContent = lock + t("roll");
+    autoBtn.textContent = lock + t("autoRoll");
+    rollBtn.title = locked ? t("lockedMsg", MIN_POOL) : "";
+    autoBtn.title = rollBtn.title;
+    stopBtn.disabled = !running;
+    targetSel.disabled = running;
+    maxInput.disabled = running;
+    refineInput.disabled = running;
+  }
+
+  function stopAuto(msg) {
+    clearTimeout(autoTimer);
+    autoTimer = null;
+    setAutoUi(false);
+    if (msg) setNotice(msg);
+  }
+
+  function autoStep() {
+    const item = doRoll();
+    if (refineOn) {
+      if (refineDone()) return stopAuto(t("refineDone", refineGoal(), refine.rolls));
+      if (rollCount - autoStart >= maxRolls()) return stopAuto(t("refineStopped", rollCount - autoStart, refine.pos, refineGoal()));
+    } else {
+      const done = rollCount - autoStart;
+      if (item.id === autoTarget) return stopAuto(t("gotItem", item.name, done));
+      if (done >= maxRolls()) return stopAuto(t("notObtained", done));
+    }
+    autoTimer = setTimeout(autoStep, AUTO_DELAY_MS);
+  }
+
+  function startAuto() {
+    if (!refineOn) {
+      autoTarget = Number(targetSel.value);
+      if (!pool.some((it) => it.id === autoTarget)) return setNotice(t("pickTarget"));
+    }
+    autoStart = rollCount;
+    setNotice("");
+    setAutoUi(true);
+    autoStep();
+  }
+
+  rollBtn.addEventListener("click", doRoll);
+  autoBtn.addEventListener("click", startAuto);
+  stopBtn.addEventListener("click", () => stopAuto(t("stoppedManual")));
+
+  refineToggle.addEventListener("change", () => {
+    refineOn = refineToggle.checked;
+    refine = { pos: 0, rolls: 0 };
+    document.body.classList.toggle("refine", refineOn);
+    targetFields.hidden = refineOn;
+    refineFields.hidden = !refineOn;
+    setNotice("");
+    renderRefine();
+  });
+  refineInput.addEventListener("input", renderRefine);
+
+  langToggle.addEventListener("change", () => {
+    lang = langToggle.checked ? "id" : "en";
+    applyI18n();
+    setNotice("");
+    renderPool();
+    renderHistory();
+    renderRefine();
+    renderResult();
+  });
+
+  applyI18n();
+  renderPool();
+  renderHistory();
+  renderRefine();
+  renderResult();
+})();
+</script>
+</body>
+</html>
