@@ -1,0 +1,28 @@
+# Gacha Simulator
+
+> Free, open-source web tool for simulating gacha / loot-box pull rates. Add items with
+> custom relative drop rates, roll manually or auto-roll until a target drops, and see
+> per-item chance percentages live. Works entirely in the browser — no account, no server,
+> nothing is saved.
+
+The tool is bilingual (English / Indonesian, toggle in the navbar). UI copy for both
+languages lives in the `T` dictionary inside `index.html`.
+
+## Key features
+
+- **Custom item pool**: add items one by one or bulk-insert `name,rate` pairs (comma or newline separated). Rates are relative — each item's chance = its rate / total of all rates.
+- **Manual roll** and **auto roll**: auto-roll repeats until the chosen target item drops, with a configurable safety limit (max rolls).
+- **Refine mode**: items carry an effect (+1 up, -1 down, 0 stays) applied to a position counter — useful for simulating enhancement/upgrade systems.
+- **Live stats**: per-item chance percentages, rolls this session, roll history.
+- **Privacy by design**: no localStorage, no IndexedDB, no backend. Closing or refreshing the tab resets everything.
+
+## Technical notes
+
+- Single static page: one `index.html` with inline CSS and vanilla JavaScript (no framework, no build step).
+- Hosted as a static site; source: https://github.com/IndyJones123/gacha-simulator
+- The QRIS donate image (`alfiandevqris.jpeg`) is the only other asset besides generated SEO images (`og.png`, `favicon.png`, `apple-touch-icon.png`, `icon-512.png`).
+
+## Optional
+
+- Contributions: https://github.com/IndyJones123/gacha-simulator
+- Author: AlfianDev — https://reogsolodev.com
